@@ -1,0 +1,13 @@
+N=1000
+x=numeric(N)
+e=rnorm(N)
+x[1]=e[1]
+for (i in 2:N) {x[i]=0.5*x[i-1]+e[i]}
+plot(x,type="l")
+
+y=numeric(N)
+for (j in 1:N) [y[j]=sum[x-1]]
+
+#difference
+z=numeric(N-1)
+for (k in 1:(N-1)) {z[k]=y[k+1]+y[k]}
