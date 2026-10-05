@@ -1,39 +1,45 @@
-# Project 4: Predicting Median Value of Boston Housing Prices
-# Using Linear Regression, Random Forest, ARMA and Logistic Regression
-
-
-# 1. Install and load necessary libraries
-install.packages(c("ISLR2", "randomForest"))
+# 1. Load libraries
 library(ISLR2)
 library(randomForest)
+library(rpart) # Built-in decision trees
 
-
-# 2. Access the data
+# 2. Access data & split (80/20)
 data("Boston")
-
-# 3. Train-test split (80% train, 20% test)
 set.seed(42)
 train_idx <- sample(1:nrow(Boston), 0.8 * nrow(Boston))
 train_data <- Boston[train_idx, ]
 test_data  <- Boston[-train_idx, ]
 
-# 4. Fit two different models
-lin_model <- lm(medv ~ ., data = train_data)                          # Linear Regression
+# 3. Fit Regression Models
+lm_model <- lm(medv ~ ., data = train_data)                          # Linear Regression
+dt_model <- rpart(medv ~ ., data = train_data)                       # Decision Tree
 rf_model <- randomForest(medv ~ ., data = train_data, ntree = 500) # Random Forest
-log_model <- glm(medv > median(medv) ~ ., data = train_data, family = binomial) # Logistic Regression
-arma_model <- arima(train_data$medv, order = c(1, 0, 1)) # ARMA model
 
-# 5. Make predictions on test set
-lin_preds <- predict(lin_model, newdata = test_data)
-rf_preds <- predict(rf_model, newdata = test_data)
-arma_preds <- predict(arma_model, n.ahead = nrow(test_data))$pred
-log_preds <- predict(log_model, newdata = test_data, type = "response")
+# 4. Generate Predictions
+results <- data.frame(
+  Actual = test_data$medv,
+  Linear = predict(lm_model, test_data),
+  Tree   = predict(dt_model, test_data),
+  RF     = predict(rf_model, test_data)
+)
 
-# 6. Compare Root Mean Squared Error (RMSE)
-calc_rmse <- function(actual, predicted) sqrt(mean((actual - predicted)^2))
+# 5. Calculate RMSE across models
+rmse <- function(act, pred) sqrt(mean((act - pred)^2))
+sapply(results[-1], function(p) rmse(results$Actual, p))
 
-cat("Linear Regression RMSE:", calc_rmse(test_data$medv, lin_preds), "\n")
-cat("Random Forest RMSE:", calc_rmse(test_data$medv, rf_preds), "\n")
-cat("ARMA RMSE:", calc_rmse(test_data$medv, arma_preds), "\n")
-log_preds <- predict(log_model, newdata = test_data, type = "response")
-cat("Logistic Regression RMSE:", calc_rmse(test_data$medv > median(test_data$medv), log_preds), "\n")
+# Plot Actual vs. Predicted values
+par(mfrow = c(1, 3)) # Arrange plots side-by-side
+
+plot(results$Actual, results$Linear, main="Linear Regression", 
+     xlab="Actual Price ($1k)", ylab="Predicted Price ($1k)", col="blue", pch=16)
+abline(0, 1, col="red", lwd=2)
+
+plot(results$Actual, results$Tree, main="Decision Tree", 
+     xlab="Actual Price ($1k)", ylab="Predicted Price ($1k)", col="green", pch=16)
+abline(0, 1, col="red", lwd=2)
+
+plot(results$Actual, results$RF, main="Random Forest", 
+     xlab="Actual Price ($1k)", ylab="Predicted Price ($1k)", col="purple", pch=16)
+abline(0, 1, col="red", lwd=2)
+
+par(mfrow = c(1, 1)) # Reset plot layout
