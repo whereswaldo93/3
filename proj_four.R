@@ -1,45 +1,50 @@
-# 1. Load libraries
 library(ISLR2)
 library(randomForest)
-library(rpart) # Built-in decision trees
+library(rpart)
 
-# 2. Access data & split (80/20)
 data("Boston")
-set.seed(42)
-train_idx <- sample(1:nrow(Boston), 0.8 * nrow(Boston))
-train_data <- Boston[train_idx, ]
-test_data  <- Boston[-train_idx, ]
+n <- nrow(Boston)
 
-# 3. Fit Regression Models
-lm_model <- lm(medv ~ ., data = train_data)                          # Linear Regression
-dt_model <- rpart(medv ~ ., data = train_data)                       # Decision Tree
-rf_model <- randomForest(medv ~ ., data = train_data, ntree = 500) # Random Forest
-
-# 4. Generate Predictions
+# Create containers to store predictions
 results <- data.frame(
-  Actual = test_data$medv,
-  Linear = predict(lm_model, test_data),
-  Tree   = predict(dt_model, test_data),
-  RF     = predict(rf_model, test_data)
+  Actual = Boston$medv,
+  Linear = numeric(n),
+  Tree   = numeric(n),
+  RF     = numeric(n)
 )
 
-# 5. Calculate RMSE across models
+# Perform LOOCV Loop
+set.seed(42)
+for (i in 1:n) {
+  train_data <- Boston[-i, ]
+  test_data  <- Boston[i, ]
+  
+  # Fit models
+  lm_model <- lm(medv ~ ., data = train_data)
+  dt_model <- rpart(medv ~ ., data = train_data)
+  rf_model <- randomForest(medv ~ ., data = train_data, ntree = 100) # Reduced ntree for performance
+  
+  # Predict for the single left-out observation
+  results$Linear[i] <- predict(lm_model, test_data)
+  results$Tree[i]   <- predict(dt_model, test_data)
+  results$RF[i]     <- predict(rf_model, test_data)
+}
+
+# Calculate RMSE across models
 rmse <- function(act, pred) sqrt(mean((act - pred)^2))
 sapply(results[-1], function(p) rmse(results$Actual, p))
 
-# Plot Actual vs. Predicted values
-par(mfrow = c(1, 3)) # Arrange plots side-by-side
+# Visualize Actual vs. Predicted values
+par(mfrow = c(1, 3))
 
-plot(results$Actual, results$Linear, main="Linear Regression", 
+plot(results$Actual, results$Linear, main="Linear Regression (LOOCV)", 
      xlab="Actual Price ($1k)", ylab="Predicted Price ($1k)", col="blue", pch=16)
 abline(0, 1, col="red", lwd=2)
 
-plot(results$Actual, results$Tree, main="Decision Tree", 
+plot(results$Actual, results$Tree, main="Decision Tree (LOOCV)", 
      xlab="Actual Price ($1k)", ylab="Predicted Price ($1k)", col="green", pch=16)
 abline(0, 1, col="red", lwd=2)
 
-plot(results$Actual, results$RF, main="Random Forest", 
+plot(results$Actual, results$RF, main="Random Forest (LOOCV)", 
      xlab="Actual Price ($1k)", ylab="Predicted Price ($1k)", col="purple", pch=16)
 abline(0, 1, col="red", lwd=2)
-
-par(mfrow = c(1, 1)) # Reset plot layout
