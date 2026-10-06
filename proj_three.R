@@ -1,32 +1,27 @@
-# ==============================================================================
-# Script: ARMA(p, q) Estimation for Single-Column Input Data
-# ==============================================================================
-
-# 1. Load Single-Column Data
-raw_data <- read.csv("your_data.csv")
+raw_data <- read.csv("TimeSeries10000.csv", header = FALSE)
 y <- raw_data[[1]]
 
-# 2. Difference to achieve stationarity
+# Difference the series to make it stationary
 z <- diff(y)
 
-# 3. Model Identification (Check ACF/PACF)
-par(mfrow = c(1, 2))
-acf(z, main = "ACF of Differenced Series")
-pacf(z, main = "PACF of Differenced Series")
-par(mfrow = c(1, 1))
+# Visual check for stationarity
+plot(z, type = "l", col = "darkgreen", 
+     main = "Stationary Series after First Differencing (z)",
+     xlab = "Time", ylab = "Value")
 
-# 4. Estimate Parameters (e.g., p = 2, q = 3)
+# Parameter Estimation for ARMA(p=2, q=3)
 p_order <- 2
 q_order <- 3
-fitted_model <- arima(z, order = c(p_order, 0, q_order))
 
-# 5. Display Parameter Table
-coefs <- fitted_model$coef
-se <- sqrt(diag(fitted_model$var.coef))
-results <- cbind(Estimate = round(coefs, 4), Std_Error = round(se, 4))
+# Fit the ARMA(2, 3) model on the stationary data
+fitted_model <- arima(z, order = c(p_order, 1, q_order), method = "ML")
 
-print(results)
+# Display Results (Estimating the p + q = 5 parameters)
+print(fitted_model)
 
-# 6. Residual Diagnostics
-residuals_data <- residuals(fitted_model)
-Box.test(residuals_data, lag = 10, type = "Ljung-Box", fitdf = p_order + q_order)
+# Extract individual parameter estimates
+ar_coefs <- fitted_model$coef[paste0("ar", 1:p_order)]
+ma_coefs <- fitted_model$coef[paste0("ma", 1:q_order)]
+
+cat("(phi_1, phi_2) :", round(ar_coefs, 4), "\n")
+cat("(theta_1, theta_2, & theta_3):", round(ma_coefs, 4), "\n")
